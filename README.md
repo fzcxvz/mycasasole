@@ -1,6 +1,4 @@
-# CasaSole 3DModel – Project Report
-
-# Plan HMI
+# CasaSole 3DModel
 
 ## Table of Contents
 

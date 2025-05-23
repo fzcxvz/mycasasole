@@ -1,109 +1,163 @@
 <template>
-  <div ref="threeCanvas" class="three-canvas"></div>
+  <div ref="threeCanvas" class="w-full h-full relative">
+    <div class="absolute top-4 left-4 bg-white p-2 rounded shadow z-10">
+      <label>Select Floor:</label>
+      <select v-model="activeFloorIndex" @change="zoomToFloor">
+        <option v-for="(floor, index) in floors" :key="index" :value="index">Floor {{ index + 1 }}</option>
+      </select>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import * as THREE from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { onMounted, ref } from 'vue'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { DragControls } from 'three/examples/jsm/controls/DragControls.js'
+import gsap from 'gsap'
 
 const threeCanvas = ref(null)
+const activeFloorIndex = ref(0)
+const floors = []
+let scene, camera, renderer, controls
+let raycaster, mouse, selectedObject = null
+let draggableObject
+const floorHeight = 10
+const numFloors = 3
 
-onMounted(() => {
-  const scene = new THREE.Scene() //3d scene
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-  const renderer = new THREE.WebGLRenderer()
+const initScene = () => {
+  scene = new THREE.Scene()
+  scene.background = new THREE.Color(0xf0f0f0)
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000)
+  camera.position.set(30, 30, 30)
+
+  renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.shadowMap.enabled = true
   threeCanvas.value.appendChild(renderer.domElement)
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
-  scene.add(ambientLight) //shadows ambient
+  controls = new OrbitControls(camera, renderer.domElement)
+  controls.enableDamping = true
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-  directionalLight.position.set(5, 10, 7.5)
-  scene.add(directionalLight)
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+  scene.add(ambientLight)
 
-  // controls camera
-  const orbitControls = new OrbitControls(camera, renderer.domElement)
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1)
+  dirLight.position.set(20, 50, 10)
+  dirLight.castShadow = true
+  scene.add(dirLight)
 
-  // layers
-  const material1 = new THREE.MeshStandardMaterial({ color: '#808080' })
-  const material2 = new THREE.MeshStandardMaterial({ color: '#404040' })
+  raycaster = new THREE.Raycaster()
+  mouse = new THREE.Vector2()
 
-  const pavement1 = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), material1) //base01 bigger
-  pavement1.rotation.x = -Math.PI / 2
-  pavement1.position.y = 0
-  scene.add(pavement1)
-
-  const pavement2 = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), material2) //base02 smaller
-  pavement2.rotation.x = -Math.PI / 2
-  pavement2.position.y = 0.01
-  pavement2.position.set(5, 0.01, 5)
-  scene.add(pavement2)
-
-  
-  const wallMaterial = new THREE.MeshStandardMaterial({ color: '#cccccc', side: THREE.DoubleSide }) // structure of thee rooms
-  const floorMaterial = new THREE.MeshStandardMaterial({ color: '#999999' })
-
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), floorMaterial)
-  floor.rotation.x = -Math.PI / 2
-  floor.position.y = 0.02
-  scene.add(floor)
-
-  const wall1 = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial)  //wall structures
-  wall1.position.set(0, 1.5, -5)
-  scene.add(wall1)
-
-  const wall2 = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial) //02
-  wall2.rotation.y = Math.PI
-  wall2.position.set(0, 1.5, 5)
-  scene.add(wall2)
-
-  const wall3 = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial) //03
-  wall3.rotation.y = Math.PI / 2
-  wall3.position.set(-5, 1.5, 0)
-  scene.add(wall3)
-
-  const wall4 = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial) //04
-  wall4.rotation.y = -Math.PI / 2
-  wall4.position.set(5, 1.5, 0)
-  scene.add(wall4)
-
-  // object motion
-  const boxGeometry = new THREE.BoxGeometry(1, 1, 1)
-  const boxMaterial = new THREE.MeshStandardMaterial({ color: '#00ff00' }) //green box square
-  const box = new THREE.Mesh(boxGeometry, boxMaterial)
-  box.position.set(0, 0.5, 0)
-  scene.add(box)
-
-  const draggableObjects = [box]
-  const dragControls = new DragControls(draggableObjects, camera, renderer.domElement) //drag box around
-
-  dragControls.addEventListener('dragstart', () => {
-    orbitControls.enabled = false
-  })
-
-  dragControls.addEventListener('dragend', () => {
-    orbitControls.enabled = true
-  })
-
-  camera.position.set(10, 10, 10)
-  camera.lookAt(0, 0, 0)
-
-  const animate = () => {
-    requestAnimationFrame(animate) //to update the scene every movement
-    renderer.render(scene, camera)
+  // Add Floors
+  for (let i = 0; i < numFloors; i++) {
+    const geometry = new THREE.PlaneGeometry(50, 50)
+    const material = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide })
+    const floor = new THREE.Mesh(geometry, material)
+    floor.rotation.x = -Math.PI / 2
+    floor.position.y = i * floorHeight
+    floor.receiveShadow = true
+    floors.push(floor)
+    scene.add(floor)
   }
 
+  // Add Draggable Block
+  const boxGeo = new THREE.BoxGeometry(3, 3, 3)
+  const boxMat = new THREE.MeshStandardMaterial({ color: 0x0077ff })
+  draggableObject = new THREE.Mesh(boxGeo, boxMat)
+  draggableObject.castShadow = true
+  setObjectOnFloor(draggableObject, 0)
+  scene.add(draggableObject)
+
+  window.addEventListener('resize', onResize)
+  renderer.domElement.addEventListener('pointerdown', onPointerDown)
+  renderer.domElement.addEventListener('pointermove', onPointerMove)
+  renderer.domElement.addEventListener('pointerup', onPointerUp)
+
   animate()
+}
+
+function setObjectOnFloor(object, floorIndex) {
+  object.position.set(0, floorIndex * floorHeight + 1.5, 0) // box height/2 = 1.5
+  object.userData.floorIndex = floorIndex
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+}
+
+function zoomToFloor() {
+  const targetY = activeFloorIndex.value * floorHeight + 10
+  const targetLookAtY = activeFloorIndex.value * floorHeight
+
+  // Animate camera position
+  gsap.to(camera.position, {
+    y: targetY,
+    duration: 1,
+    ease: "power2.out"
+  })
+
+  // Animate controls target
+  gsap.to(controls.target, {
+    y: targetLookAtY,
+    duration: 1,
+    ease: "power2.out",
+    onUpdate: () => controls.update()
+  })
+
+  // Snap object to the selected floor
+  setObjectOnFloor(draggableObject, activeFloorIndex.value)
+}
+
+function onPointerDown(event) {
+  mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1
+  mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1
+  raycaster.setFromCamera(mouse, camera)
+  const intersects = raycaster.intersectObject(draggableObject)
+  if (intersects.length > 0) {
+    selectedObject = intersects[0].object
+    controls.enabled = false
+  }
+}
+
+function onPointerMove(event) {
+  if (!selectedObject) return
+
+  mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1
+  mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1
+  raycaster.setFromCamera(mouse, camera)
+
+  const floor = floors[activeFloorIndex.value]
+  const intersects = raycaster.intersectObject(floor)
+  if (intersects.length > 0) {
+    const point = intersects[0].point
+    selectedObject.position.x = point.x
+    selectedObject.position.z = point.z
+    selectedObject.position.y = activeFloorIndex.value * floorHeight + 1.5 // stay on top of floor
+  }
+}
+
+function onPointerUp() {
+  selectedObject = null
+  controls.enabled = true
+}
+
+function animate() {
+  requestAnimationFrame(animate)
+  controls.update()
+  renderer.render(scene, camera)
+}
+
+onMounted(() => {
+  initScene()
 })
 </script>
 
 <style scoped>
-.three-canvas {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+canvas {
+  display: block;
 }
 </style>

@@ -1,4 +1,3 @@
-
 <template>
   <div ref="threeCanvas" class="w-full h-full relative">
     <div class="absolute top-4 left-4 bg-white p-2 rounded shadow z-10">
@@ -27,7 +26,7 @@ const floors = ref([
 const floorMeshes = {}
 
 let scene, camera, renderer, controls
-const floorHeight = 10
+const floorHeight = 15
 const numFloors = 3
 
 const initScene = () => {
@@ -64,35 +63,48 @@ for (let i = 0; i < numFloors; i++) {
     scene.add(base);
     floorMeshes[base.name] = base;
 
-    // Add rooms on top of the base
-    const roomMaterial = new THREE.MeshStandardMaterial({ color: 0x00cc99 });
+    // Add realistic office room walls
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 }); // Dark gray walls
     for (let x = -1; x <= 1; x++) {
         for (let z = -1; z <= 1; z++) {
             if (x === 0 && z === 0) continue;
             
-            const wallThickness = 0.2;
-            const roomWidth = 4;
-            const roomDepth = 4;
-            const roomHeight = 2.5;
-            const baseY = i * floorHeight + 0.5 + roomHeight / 2;
+            const wallThickness = 0.15;
+            const roomWidth = 5;
+            const roomDepth = 5;
+            const roomHeight = 4; // Mid-height walls like office cubicles/partitions
+            const baseY = i * floorHeight + 0.5; // Start from floor level
+            const wallY = baseY + roomHeight / 2; // Center walls vertically
 
             const createWall = (width, height, depth, posX, posY, posZ) => {
-              const wall = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), roomMaterial);
+              const wall = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), wallMaterial);
               wall.position.set(posX, posY, posZ);
               scene.add(wall);
             };
 
-            const cx = x * 6;
-            const cz = z * 6;
+            const cx = x * 7; // Increased spacing for better room separation
+            const cz = z * 7;
 
-            // Front Wall
-            createWall(roomWidth, roomHeight, wallThickness, cx, baseY, cz - roomDepth / 2);
-            // Back Wall
-            createWall(roomWidth, roomHeight, wallThickness, cx, baseY, cz + roomDepth / 2);
-            // Left Wall
-            createWall(wallThickness, roomHeight, roomDepth, cx - roomWidth / 2, baseY, cz);
-            // Right Wall
-            createWall(wallThickness, roomHeight, roomDepth, cx + roomWidth / 2, baseY, cz);
+            // Create room walls with doorway opening in front wall
+            // Front Wall (with doorway)
+            const doorWidth = 1.5;
+            const wallSegmentWidth = (roomWidth - doorWidth) / 2;
+            
+            // Left segment of front wall
+            createWall(wallSegmentWidth, roomHeight, wallThickness, 
+                      cx - doorWidth/2 - wallSegmentWidth/2, wallY, cz - roomDepth / 2);
+            // Right segment of front wall
+            createWall(wallSegmentWidth, roomHeight, wallThickness, 
+                      cx + doorWidth/2 + wallSegmentWidth/2, wallY, cz - roomDepth / 2);
+            
+            // Back Wall (solid)
+            createWall(roomWidth, roomHeight, wallThickness, cx, wallY, cz + roomDepth / 2);
+            
+            // Left Wall (solid)
+            createWall(wallThickness, roomHeight, roomDepth, cx - roomWidth / 2, wallY, cz);
+            
+            // Right Wall (solid)
+            createWall(wallThickness, roomHeight, roomDepth, cx + roomWidth / 2, wallY, cz);
 
         }
     }

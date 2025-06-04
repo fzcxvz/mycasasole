@@ -48,8 +48,18 @@
         </div>
   </div>
   </div>
+  <div class="grafana-panel">
+    <iframe
+      :src="grafanaUrl"
+      width="100%"
+      height="600"
+      frameborder="0"
+    ></iframe>
+  </div>
   <input @change="handleGLBUpload" accept=".glb" type="file"/></template>
   <script setup="">
+  const grafanaUrl = 'http://20.8.48.85:3000/public-dashboards/730410a5391b4c4691db3df61bf8edf9';
+
   import * as THREE from 'three'
   import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
   import { onMounted, ref, nextTick, computed } from 'vue'
@@ -765,6 +775,8 @@ const roomLabel = computed(() => {
   const floor = floors.find(f => f.id === selectedFloor);
   return selectedFloor && floor ? `on ${floor.name}` : 'total';
 });
+
+  
 
   </script>
   <style scoped="">

@@ -44,7 +44,7 @@
   <!-- Room Counter -->
   <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-lg z-10 border">
   <div class="text-sm text-gray-600">
-  <strong>{{ visibleRooms }}</strong> rooms {{ selectedFloor ? `on ${floors.find(f =&gt; f.id === selectedFloor)?.name}` : 'total' }}
+  <strong>{{ visibleRooms }}</strong> rooms {{ roomLabel }}
         </div>
   </div>
   </div>
@@ -759,6 +759,13 @@
     reader.readAsArrayBuffer(file);
   }
   
+
+const roomLabel = computed(() => {
+  if (!Array.isArray(floors)) return 'total';
+  const floor = floors.find(f => f.id === selectedFloor);
+  return selectedFloor && floor ? `on ${floor.name}` : 'total';
+});
+
   </script>
   <style scoped="">
   select {
